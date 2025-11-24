@@ -2,9 +2,9 @@ use std::fmt;
 
 use crate::token::*;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum LexError {
-    UnexepectedChar { ch: char, span: (usize, usize) },
+    UnexpectedChar { char: String, span: (usize, usize) },
     InvalidNumber { lexeme: String, span: (usize, usize) },
     InvalidUTF8 { span: (usize, usize) },
 }
@@ -12,15 +12,12 @@ pub enum LexError {
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            // This variant has a char and a span
-            LexError::UnexepectedChar { ch, span } => {
-                write!(f, "Unexpected character '{}' at {}..{}", ch, span.0, span.1)
+            LexError::UnexpectedChar { char, span } => {
+                write!(f, "Unexpected character '{}' at {}..{}", char, span.0, span.1)
             }
-            // This variant has a string lexeme and a span
             LexError::InvalidNumber { lexeme, span } => {
                 write!(f, "Invalid number '{}' at {}..{}", lexeme, span.0, span.1)
             }
-            // This variant has only a span
             LexError::InvalidUTF8 { span } => {
                 write!(f, "Invalid UTF-8 sequence at {}..{}", span.0, span.1)
             }
@@ -36,7 +33,16 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn from_bytes(source: &'a [u8]) -> Self {
+        Self {
+            source,
+            tokens: Vec::new(),
+            start: 0,
+            curr: 0
+        }
+    }
+
+    pub fn from_str(source: &'a str) -> Self {
         Self {
             source: source.as_bytes(),
             tokens: Vec::new(),
@@ -70,11 +76,13 @@ impl<'a> Lexer<'a> {
                     _ => {},
                 },
                 _ => {
-                    return Err(LexError::UnexepectedChar { ch: c, span: (self.curr, self.start) });
+                    return Err(LexError::UnexpectedChar { char: c.to_string(), span: (self.start, self.curr) });
                 }
             }
         }
 
+        self.start = self.curr;
+        self.increment();
         self.add_token(TokenType::EOF, "");
         Ok(&self.tokens)
     }
@@ -101,11 +109,12 @@ impl<'a> Lexer<'a> {
 
     fn number(&mut self) -> Result<(), LexError> {
         while Self::is_digit(self.peek()) {
-            self.advance();
+            let c = self.advance();
+            println!("{}", c);
         }
 
         // Optional decimal part
-        if self.peek() == '.' && Self::is_digit(self.peek_next()) {
+        if self.peek() == '.' {
             self.advance(); // consume '.'
             while Self::is_digit(self.peek()) || self.peek() == '.' {
                 self.advance();
@@ -141,22 +150,151 @@ impl<'a> Lexer<'a> {
         return self.source[self.curr] as char;
     }
 
-    fn peek_next(&mut self) -> char {
-        let index = self.curr + 1;
-        if index >= self.source.len() {
-            return '\0';
-        }
-        return self.source[index] as char;
-    }
-
     fn advance(&mut self) -> char {
         let res = self.source[self.curr] as char;
-        self.curr += 1;
+        self.increment();
         return res;
     }
 
     fn is_at_end(&self) -> bool {
         self.curr >= self.source.len()
+    }
+
+    fn increment(&mut self) {
+        self.curr += 1;
+    }
+
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_token<S : Into<String>>(token_type: TokenType, lexeme: S, span: (usize, usize)) -> Token {
+        Token { token_type, lexeme: lexeme.into(), span }
+    }
+
+    fn assert_lex(input: &str, expected: &Vec<Token>) {
+        let mut lexer = Lexer::from_str(input);
+        let tokens = lexer.scan().unwrap();
+        assert_eq!(tokens, expected);
+    }
+
+    fn assert_lex_error(input: &str, expected: LexError) {
+        let mut lexer = Lexer::from_str(input);
+        let result = lexer.scan();
+        match result {
+            Ok(tokens) => panic!("Expected error {:?}, but got Ok: {:?}", expected, tokens),
+            Err(e) => assert_eq!(e, expected)
+        }
+    }
+
+    #[test]
+    fn test_eof_with_crlf() {
+        assert_lex("\r\n",&vec![make_token(TokenType::EOF, "", (2, 3))]);
+    }
+
+    #[test]
+    fn test_eof_single_whitespace() {
+        assert_lex(" ", &vec![make_token(TokenType::EOF, "", (1, 2))]);
+    }
+
+    #[test]
+    fn test_eof_multiple_whitespace() {
+        assert_lex("   ", &vec![make_token(TokenType::EOF, "", (3, 4))]);
+    }
+
+    #[test]
+    fn test_number_valid() {
+        assert_lex(
+            ".1",
+            &vec![
+                make_token(TokenType::Number, ".1", (0, 2)),
+                make_token(TokenType::EOF, "", (2, 3)),
+            ]
+        );
+        assert_lex(
+            "1.",
+            &vec![
+                make_token(TokenType::Number, "1.", (0, 2)),
+                make_token(TokenType::EOF, "", (2, 3)),
+            ]
+        );
+        assert_lex(
+            "1.1",
+            &vec![
+                make_token(TokenType::Number, "1.1", (0, 3)),
+                make_token(TokenType::EOF, "", (3, 4)),
+            ]
+        );
+        assert_lex(
+            "123",
+            &vec![
+                make_token(TokenType::Number, "123", (0, 3)),
+                make_token(TokenType::EOF, "", (3, 4)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_number_invalid() {
+        assert_lex_error(
+            ".1.23", 
+            LexError::InvalidNumber { lexeme: ".1.23".to_string(), span: (0, 5) }
+        );
+        assert_lex_error(
+            "1.23.", 
+            LexError::InvalidNumber { lexeme: "1.23.".to_string(), span: (0, 5) }
+        );
+        assert_lex_error(
+            ".", 
+            LexError::InvalidNumber { lexeme: ".".to_string(), span: (0, 1) }
+        );
+        assert_lex_error(
+            "..", 
+            LexError::InvalidNumber { lexeme: "..".to_string(), span: (0, 2) }
+        );
+        assert_lex_error(
+            ".123.", 
+            LexError::InvalidNumber { lexeme: ".123.".to_string(), span: (0, 5) }
+        );
+    
+    }
+
+    #[test]
+    fn test_numbers_split_by_identifier() {
+        assert_lex(
+            "0x1",
+        &vec![
+            make_token(TokenType::Number, "0", (0, 1)),
+            make_token(TokenType::Identifier, "x", (1, 2)),
+            make_token(TokenType::Number, "1", (2, 3)),
+            make_token(TokenType::EOF, "", (3, 4))
+        ]);
+    }
+
+    #[test]
+    fn test_negative_sign_is_operator() {
+        assert_lex(
+            "-1",
+            &vec![
+                make_token(TokenType::Minus, "-", (0, 1)),
+                make_token(TokenType::Number, "1", (1, 2)),
+                make_token(TokenType::EOF, "", (2, 3)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_unexpected_char() {
+        let bad_chars = vec!["@", "#", "!", ";"];
+            for c in bad_chars {
+                assert_lex_error(
+                    c,
+                    LexError::UnexpectedChar { char: c.to_string(), span: (0, 1) }
+            );
+        }
     }
 
 }

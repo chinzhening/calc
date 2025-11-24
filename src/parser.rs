@@ -35,7 +35,7 @@ pub struct Parser {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
     ExpectExpression { token: Token },
     ExpectEndOfExpression { token: Token },
@@ -158,16 +158,28 @@ impl Parser {
     }
 
     fn consume(&mut self, token_type: TokenType) -> Result<(), ParseError> {
-        if self.curr().token_type == token_type {
+        if !self.is_at_end() && self.curr().token_type == token_type {
             self.advance();
             return Ok(());
         }
-        match self.curr().token_type {
+
+        match token_type {
             TokenType::RightParen => {
-                Err(ParseError::ExpectRightParenAfterExpression { token: self.curr().clone() })
+                Err(ParseError::ExpectRightParenAfterExpression {
+                    token: self.curr().clone()
+                })
             },
-            TokenType::EOF => {
-                Err(ParseError::ExpectEndOfExpression { token: self.curr().clone() })
+            TokenType::EOF => {  // TODO: handle this more elegantly.
+                let prev_token_span = self.prev().span;
+                let eof_span = (prev_token_span.1, prev_token_span.1 + 1);
+                let eof_token = Token {
+                    token_type: TokenType::EOF,
+                    lexeme: "".to_string(),
+                    span: eof_span
+                };
+                Err(ParseError::ExpectEndOfExpression {
+                    token: eof_token
+                })
             }
             _ => Ok(()),
         }
@@ -186,12 +198,15 @@ impl Parser {
             },
         }
 
-        while precedence <= Self::get_parse_rule(&self.curr().token_type.clone()).precedence {
+        while !self.is_at_end() { // TODO: handle this more elegantly.
+            if precedence > Self::get_parse_rule(&self.curr().token_type.clone()).precedence {
+                break;
+            }
             self.advance();
             let prev_token_type = self.prev().token_type.clone();
             let infix_rule = Self::get_parse_rule(&prev_token_type).infix;
             match infix_rule {
-                None => {},      // unreachable?
+                None => {},
                 Some(infix_rule) => {
                     infix_rule(self)?;
                 }
@@ -206,6 +221,7 @@ impl Parser {
         self.curr += 1;
     }
 
+    /* Might cause panic */
     fn curr(&self) -> &Token {
         &self.tokens[self.curr]
     }
@@ -213,6 +229,127 @@ impl Parser {
     fn prev(&self) -> &Token {
         &self.tokens[self.prev]
     }
+    
+    fn is_at_end(&self) -> bool {
+        self.curr >= self.tokens.len()
+    }
 
 }
 
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::token::{Token, TokenType};
+    use crate::operation::Operation;
+
+    fn make_token<S: Into<String>>(token_type: TokenType, lexeme: S, span: (usize, usize)) -> Token {
+        Token { token_type, lexeme: lexeme.into(), span }
+    }
+
+    fn assert_parse(tokens: Vec<Token>, expected_ops: &[Operation]) {
+        let mut parser = Parser::new(&tokens);
+        let ops = parser.parse().expect("Parser failed");
+        assert_eq!(ops.as_slice(), expected_ops);
+    }
+
+    fn assert_parse_error(tokens: Vec<Token>, expected_error: ParseError) {
+        let mut parser = Parser::new(&tokens);
+        let result = parser.parse();
+        match result {
+            Ok(_) => panic!("Expected parser error {:?}, but got Ok", expected_error),
+            Err(e) => assert_eq!(e, expected_error),
+        }
+    }
+
+    #[test]
+    fn test_single_number() {
+        assert_parse(
+            vec![
+                make_token(TokenType::Number, "42", (0, 2)),
+                make_token(TokenType::EOF, "", (2, 2)),
+            ],
+            &[Operation::Const(42.0)]
+        );
+    }
+
+    #[test]
+    fn test_unary_minus() {
+        assert_parse(
+            vec![
+                make_token(TokenType::Minus, "-", (0, 1)),
+                make_token(TokenType::Number, "7", (1, 2)),
+                make_token(TokenType::EOF, "", (2, 2)),
+            ],
+            &[Operation::Const(7.0), Operation::Negate]
+        );
+    }
+
+    #[test]
+    fn test_simple_addition() {
+        assert_parse(
+            vec![
+                make_token(TokenType::Number, "1", (0, 1)),
+                make_token(TokenType::Plus, "+", (1, 2)),
+                make_token(TokenType::Number, "2", (2, 3)),
+                make_token(TokenType::EOF, "", (3, 3)),
+            ],
+            &[Operation::Const(1.0), Operation::Const(2.0), Operation::Add]
+        );
+    }
+
+    #[test]
+    fn test_missing_expression() {
+        // EOF where an expression is expected. the parse() method immediately
+        // searches for an expression() by default. This could change in the future.
+        assert_parse_error(
+            vec![
+                make_token(TokenType::EOF, "", (0, 1)),
+            ],
+            ParseError::ExpectExpression { token: make_token(TokenType::EOF, "", (0,1)) }
+        );
+
+        // Binary Operation followed by EOF where parser expects a right operand.
+        assert_parse_error(
+            vec![
+                make_token(TokenType::Number, "1", (0,1)),
+                make_token(TokenType::Plus, "+", (1,2)),
+                make_token(TokenType::EOF, "", (2,3)),
+            ],
+            ParseError::ExpectExpression {
+                token: make_token(TokenType::EOF, "", (2,3))
+            }
+        );
+    }
+
+    #[test]
+    fn test_missing_right_paren() {
+        // Open parenthesis without a matching right parenthesis
+        assert_parse_error(
+            vec![
+                make_token(TokenType::LeftParen, "(", (0,1)),
+                make_token(TokenType::Number, "1", (1,2)),
+                make_token(TokenType::EOF, "", (2,3)),
+            ],
+            ParseError::ExpectRightParenAfterExpression {
+                token: make_token(TokenType::EOF, "", (2,3))
+            }
+        );
+    }
+
+    #[test]
+    fn test_unexpected_end_of_expression() {
+        // EOF token missing
+        assert_parse_error(
+            vec![
+                make_token(TokenType::Number, "1", (0,1)),
+                make_token(TokenType::Plus, "+", (1,2)),
+                make_token(TokenType::Number, "1", (2,3)),
+            ],
+            ParseError::ExpectEndOfExpression {
+                token: make_token(TokenType::EOF, "", (3,4))
+            }
+        );
+    }
+}

@@ -31,7 +31,7 @@ fn repl() -> io::Result<()> {
             continue;
         }
 
-        let mut lexer = lexer::Lexer::new(input.as_str());
+        let mut lexer = lexer::Lexer::from_str(input.as_str());
         let tokens = lexer.scan();
 
         match tokens {
