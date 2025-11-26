@@ -318,4 +318,14 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_sin_identified() {
+        assert_lex(
+            "sin",
+            &vec![
+                make_token(TokenType::Sin, "sin", (0, 3)),
+                make_token(TokenType::EOF, "", (3, 4))
+            ]);
+    }
+
 }

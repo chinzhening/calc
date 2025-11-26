@@ -264,6 +264,8 @@ mod tests {
     use super::*;
     use crate::operation::Operation;
     use crate::token::{Token, TokenType};
+    use TokenType::*;
+    use Operation as Op;
 
     fn make_token<S: Into<String>>(
         token_type: TokenType,
@@ -294,12 +296,13 @@ mod tests {
 
     #[test]
     fn test_single_number() {
+
         assert_parse(
             vec![
-                make_token(TokenType::Number, "42", (0, 2)),
-                make_token(TokenType::EOF, "", (2, 2)),
+                make_token(Number, "42", (0, 2)),
+                make_token(EOF, "", (2, 2)),
             ],
-            &[Operation::Const(42.0)],
+            &[Op::Const(42.0)],
         );
     }
 
@@ -307,11 +310,11 @@ mod tests {
     fn test_unary_minus() {
         assert_parse(
             vec![
-                make_token(TokenType::Minus, "-", (0, 1)),
-                make_token(TokenType::Number, "7", (1, 2)),
-                make_token(TokenType::EOF, "", (2, 2)),
+                make_token(Minus, "-", (0, 1)),
+                make_token(Number, "7", (1, 2)),
+                make_token(EOF, "", (2, 2)),
             ],
-            &[Operation::Const(7.0), Operation::Negate],
+            &[Op::Const(7.0), Op::Negate],
         );
     }
 
@@ -319,12 +322,12 @@ mod tests {
     fn test_simple_addition() {
         assert_parse(
             vec![
-                make_token(TokenType::Number, "1", (0, 1)),
-                make_token(TokenType::Plus, "+", (1, 2)),
-                make_token(TokenType::Number, "2", (2, 3)),
-                make_token(TokenType::EOF, "", (3, 3)),
+                make_token(Number, "1", (0, 1)),
+                make_token(Plus, "+", (1, 2)),
+                make_token(Number, "2", (2, 3)),
+                make_token(EOF, "", (3, 3)),
             ],
-            &[Operation::Const(1.0), Operation::Const(2.0), Operation::Add],
+            &[Op::Const(1.0), Op::Const(2.0), Op::Add],
         );
     }
 
@@ -333,21 +336,21 @@ mod tests {
         // EOF where an expression is expected. the parse() method immediately
         // searches for an expression() by default. This could change in the future.
         assert_parse_error(
-            vec![make_token(TokenType::EOF, "", (0, 1))],
+            vec![make_token(EOF, "", (0, 1))],
             ParseError::ExpectExpression {
-                token: make_token(TokenType::EOF, "", (0, 1)),
+                token: make_token(EOF, "", (0, 1)),
             },
         );
 
         // Binary Operation followed by EOF where parser expects a right operand.
         assert_parse_error(
             vec![
-                make_token(TokenType::Number, "1", (0, 1)),
-                make_token(TokenType::Plus, "+", (1, 2)),
-                make_token(TokenType::EOF, "", (2, 3)),
+                make_token(Number, "1", (0, 1)),
+                make_token(Plus, "+", (1, 2)),
+                make_token(EOF, "", (2, 3)),
             ],
-            ParseError::ExpectExpression {
-                token: make_token(TokenType::EOF, "", (2, 3)),
+            ExpectExpression {
+                token: make_token(EOF, "", (2, 3)),
             },
         );
     }
@@ -357,12 +360,12 @@ mod tests {
         // Open parenthesis without a matching right parenthesis
         assert_parse_error(
             vec![
-                make_token(TokenType::LeftParen, "(", (0, 1)),
-                make_token(TokenType::Number, "1", (1, 2)),
-                make_token(TokenType::EOF, "", (2, 3)),
+                make_token(LeftParen, "(", (0, 1)),
+                make_token(Number, "1", (1, 2)),
+                make_token(EOF, "", (2, 3)),
             ],
             ParseError::ExpectRightParenAfterExpression {
-                token: make_token(TokenType::EOF, "", (2, 3)),
+                token: make_token(EOF, "", (2, 3)),
             },
         );
     }
@@ -372,11 +375,39 @@ mod tests {
         // EOF token missing
         assert_parse_error(
             vec![
-                make_token(TokenType::Number, "1", (0, 1)),
-                make_token(TokenType::Plus, "+", (1, 2)),
-                make_token(TokenType::Number, "1", (2, 3)),
+                make_token(Number, "1", (0, 1)),
+                make_token(Plus, "+", (1, 2)),
+                make_token(Number, "1", (2, 3)),
             ],
             ExpectEndOfExpression,
+        );
+    }
+
+    #[test]
+    fn test_trig_parse() {
+        assert_parse(
+            vec![
+                make_token(Sin, "sin", (0, 3)),
+                make_token(LeftParen, "(", (3, 4)),
+                make_token(Number, "1.0", (4, 7)),
+                make_token(Plus, "+", (7, 8)),
+                make_token(Number, "1.0", (8, 11)),
+                make_token(RightParen, ")", (11, 12)),
+                make_token(EOF, "", (12, 13)),
+            ],
+            &[Op::Const(1.0), Op::Const(1.0), Op::Add, Op::Sin]
+        );
+
+        assert_parse(
+            vec![
+                make_token(Sin, "sin", (0, 3)),
+                make_token(Number, "1.0", (3, 6)),
+                make_token(Plus, "+", (6, 7)),
+                make_token(Number, "1.0", (7, 10)),
+                make_token(EOF, "", (10, 11)),
+            ],
+            &[Op::Const(1.0), Op::Sin, Op::Const(1.0), Op::Add]
+
         );
     }
 }

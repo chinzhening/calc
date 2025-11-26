@@ -173,7 +173,8 @@ fn interpret_inv_trig(
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::PI;
+    use core::f64;
+    use std::f64::consts::{FRAC_PI_4, FRAC_PI_2, PI};
 
     use super::*;
 
@@ -275,5 +276,29 @@ mod tests {
     fn test_cos() {
         let ops = vec![Const(0.0), Cos];
         assert_approx_eq(eval(ops), 1.0);
+    }
+
+    #[test]
+    fn test_tan() {
+        let ops = vec![Const(FRAC_PI_2), Tan];
+        assert!(eval(ops).abs() > 1.0 / EPS_INTERNAL);
+    }
+
+    #[test]
+    fn test_arcsin() {
+        let ops = vec![Const(1.0), ArcSin];
+        assert_approx_eq(eval(ops), FRAC_PI_2);
+    }
+
+    #[test]
+    fn test_arccos() {
+        let ops = vec![Const(1.0), ArcCos];
+        assert_approx_eq(eval(ops), 0.0);
+    }
+
+    #[test]
+    fn test_arctan() {
+        let ops = vec![Const(1.0), ArcTan];
+        assert_approx_eq(eval(ops), FRAC_PI_4);
     }
 }
