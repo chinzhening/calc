@@ -13,6 +13,8 @@ fn main() -> io::Result<()> {
 
 
 fn repl() -> io::Result<()> {
+    let mut vm = vm::VirtualMachine::new();
+
     loop {
         print!(">> ");
         io::stdout().flush()?;
@@ -25,27 +27,26 @@ fn repl() -> io::Result<()> {
             break;
         }
 
-        if input.trim() == "q" {
-            break;
-        } else if input.trim().is_empty() {
-            continue;
+        match input.trim() {
+            "q" => break,
+            "--mode=radian" => {vm.use_radians=true; continue},
+            "--mode=degree" => {vm.use_radians=false; continue},
+            "" => continue,
+            _ => {},
         }
 
-        let mut lexer = lexer::Lexer::from_str(input.as_str());
-        let tokens = lexer.scan();
+        let tokens = lexer::scan(input);
 
         match tokens {
             Err(e) => eprintln!("{}", e),
             Ok(tokens) => {
-
-                let mut parser = parser::Parser::new(tokens);
-                let operations = parser.parse();
+                let operations = parser::parse(tokens);
                 
                 match operations {
                     Err(e) => eprintln!("{}", e),
                     Ok(operations) => {
 
-                        let result = vm::interpret(operations);
+                        let result = vm.interpret(&operations);
                         match result {
                             Ok(output ) => println!("{}", output),
                             Err(e) => eprintln!("{}", e),

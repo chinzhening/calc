@@ -12,7 +12,9 @@ pub enum TokenType {
     Star,
 
     Number,
-    Identifier,
+    
+    Sin, Cos, Tan,
+    ArcSin, ArcCos, ArcTan,
 
     EOF,
 }

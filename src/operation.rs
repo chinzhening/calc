@@ -10,4 +10,8 @@ pub enum Operation {
     Subtract,
     Times,
     Divide,
+
+    // Functions
+    Sin, Cos, Tan,
+    ArcSin, ArcCos, ArcTan,
 }

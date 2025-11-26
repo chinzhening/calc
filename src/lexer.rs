@@ -2,9 +2,22 @@ use std::fmt;
 
 use crate::token::*;
 
+
+
+pub fn scan<T: AsRef<[u8]>>(source: T) -> Result<Vec<Token>, LexError> {
+    let mut lexer = Lexer::from_bytes(source.as_ref());
+    lexer.scan().cloned()
+}
+
+
+
+
+
+
 #[derive(Debug, PartialEq)]
 pub enum LexError {
     UnexpectedChar { char: String, span: (usize, usize) },
+    UnknownIdentifier { lexeme: String, span: (usize, usize) },
     InvalidNumber { lexeme: String, span: (usize, usize) },
     InvalidUTF8 { span: (usize, usize) },
 }
@@ -14,6 +27,9 @@ impl fmt::Display for LexError {
         match self {
             LexError::UnexpectedChar { char, span } => {
                 write!(f, "Unexpected character '{}' at {}..{}", char, span.0, span.1)
+            }
+            LexError::UnknownIdentifier { lexeme, span } => {
+                write!(f, "Unknown identifier '{}' at {}..{}", lexeme, span.0, span.1)
             }
             LexError::InvalidNumber { lexeme, span } => {
                 write!(f, "Invalid number '{}' at {}..{}", lexeme, span.0, span.1)
@@ -76,7 +92,9 @@ impl<'a> Lexer<'a> {
                     _ => {},
                 },
                 _ => {
-                    return Err(LexError::UnexpectedChar { char: c.to_string(), span: (self.start, self.curr) });
+                    return Err(LexError::UnexpectedChar {
+                        char: c.to_string(), span: (self.start, self.curr)
+                    });
                 }
             }
         }
@@ -101,11 +119,26 @@ impl<'a> Lexer<'a> {
         }
 
         let lexeme = str::from_utf8(&self.source[self.start..self.curr])
-            .map_err(|_| LexError::InvalidUTF8 { span: (self.start, self.curr) })?;
+            .map_err(|_| LexError::InvalidUTF8 { span: (self.start, self.curr) }
+        )?;
 
-        self.add_token(TokenType::Identifier, lexeme);
+        let token_type: TokenType = self.identifier_type(lexeme)?;
+
+        self.add_token(token_type, lexeme);
         Ok(())
     }
+
+    fn identifier_type(&mut self, lexeme: &str) -> Result<TokenType, LexError> {
+        match lexeme {
+            "sin" => Ok(TokenType::Sin),
+            "cos" => Ok(TokenType::Cos),
+            "tan" => Ok(TokenType::Tan),
+            "arcsin" => Ok(TokenType::ArcSin),
+            "arccos" => Ok(TokenType::ArcCos),
+            "arctan" => Ok(TokenType::ArcTan),
+            _ => Err(LexError::UnknownIdentifier { lexeme: lexeme.into(), span: (self.start, self.curr) }),
+        }
+    } 
 
     fn number(&mut self) -> Result<(), LexError> {
         while Self::is_digit(self.peek()) {
@@ -260,18 +293,6 @@ mod tests {
             LexError::InvalidNumber { lexeme: ".123.".to_string(), span: (0, 5) }
         );
     
-    }
-
-    #[test]
-    fn test_numbers_split_by_identifier() {
-        assert_lex(
-            "0x1",
-        &vec![
-            make_token(TokenType::Number, "0", (0, 1)),
-            make_token(TokenType::Identifier, "x", (1, 2)),
-            make_token(TokenType::Number, "1", (2, 3)),
-            make_token(TokenType::EOF, "", (3, 4))
-        ]);
     }
 
     #[test]
