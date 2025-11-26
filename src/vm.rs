@@ -6,7 +6,7 @@ macro_rules! binary_op {
     ($ops:ident, $op:tt) => {
         match ($ops.pop(), $ops.pop()) {
             (Some(x), Some(y)) => {
-                $ops.push(y $op x);
+                $ops.push(y $op x)
             },
             _ => {},
         }
@@ -17,11 +17,9 @@ macro_rules! binary_op {
 
 #[derive(Debug)]
 pub enum RuntimeError {
-    DivisionByZero,
-    // InvalidOperation,
-    Overflow,
-    // Underflow,
-    // FunctionDomainError,
+    MathError,
+    Underflow,
+    NotImplemented,
 }
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -39,25 +37,49 @@ impl fmt::Display for InterpretOutput {
 }
 
 pub fn interpret(operations: &Vec<Operation>) -> Result<InterpretOutput, RuntimeError> {
-    let mut stack: Vec<f64> = Vec::new();
-    operations.iter().for_each(|op|
+    let stack = &mut Vec::new();
+    for op in operations {
         match op {
             Operation::Add => binary_op!(stack, +),
             Operation::Subtract => binary_op!(stack, -),
             Operation::Times => binary_op!(stack, *),
-            Operation::Divide => binary_op!(stack, /),  // TODO: DivisionByZero, Inf, NaN
-            Operation::Negate => match stack.pop() {
-                Some(val) => stack.push(-val),
-                _ => {},
-            }
+            Operation::Divide => { interpret_divide(stack)?; },
+            Operation::Negate => { interpret_negate(stack)?; },
             Operation::Const(val) => {
                 stack.push(val.clone());     // TODO: handle this better.
             },
+            _ => { return Err(RuntimeError::NotImplemented); }
         }
-    );
+    }
     Ok(InterpretOutput { result: stack[0] }) // TODO: handle this better.
     
 }
+
+fn interpret_divide(stack: &mut Vec<f64>) -> Result<(), RuntimeError> {
+    match (stack.pop(), stack.pop()) {
+        (Some(x), Some(y)) => {
+            if x == 0.0 {
+                Err(RuntimeError::MathError)
+            }
+            else {
+                stack.push(y / x);
+                Ok(())
+            }
+        },
+        _ => Err(RuntimeError::Underflow)
+    }
+}
+
+fn interpret_negate(stack : &mut Vec<f64>) -> Result<(), RuntimeError> {
+    match stack.pop() {
+        Some(val) => {
+            stack.push(-val);
+            Ok(())
+        },
+        _ => Err(RuntimeError::Underflow),
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
