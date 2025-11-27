@@ -110,6 +110,11 @@ impl Parser {
                 infix: Some(|parser| parser.binary()),
                 precedence: Precedence::Factor,
             },
+            Ans => ParseRule {
+                prefix: Some(|parser| parser.ans()),
+                infix: None,
+                precedence: Precedence::None,
+            },
             Number => ParseRule {
                 prefix: Some(|parser| parser.number()),
                 infix: None,
@@ -185,6 +190,11 @@ impl Parser {
     fn number(&mut self) -> Result<(), ParseError> {
         let val = self.prev().lexeme.parse::<f64>().unwrap();
         self.operations.push(Operation::Const(val));
+        Ok(())
+    }
+
+    fn ans(&mut self) -> Result<(), ParseError> {
+        self.operations.push(Operation::Ans);
         Ok(())
     }
 

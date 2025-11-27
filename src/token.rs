@@ -16,6 +16,8 @@ pub enum TokenType {
     Sin, Cos, Tan,
     ArcSin, ArcCos, ArcTan,
 
+    Ans,
+
     EOF,
 }
 

@@ -13,6 +13,7 @@ pub enum RuntimeError {
     DomainError,
     Underflow,
     NotImplemented,
+    NoPreviousAnswer
 }
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -32,12 +33,14 @@ impl fmt::Display for InterpretOutput {
 
 pub struct VirtualMachine {
     pub use_radians: bool,
+    prev_ans: Vec<InterpretOutput>,
     table: HashMap<String, f64>,
 }
 impl VirtualMachine {
     pub fn new() -> Self {
         Self {
             use_radians: true,
+            prev_ans: Vec::new(),
             table: HashMap::new(),
         }
     }
@@ -55,15 +58,53 @@ impl VirtualMachine {
                 Times => interpret_times(stack)?,
                 Divide => interpret_divide(stack)?,
                 Negate => interpret_negate(stack)?,
-                Sin | Cos | Tan => interpret_trig(stack, op, self.use_radians)?,
-                ArcSin | ArcCos | ArcTan => interpret_inv_trig(stack, op, self.use_radians)?,
-                Const(val) => stack.push(val.clone()), // TODO: handle this better.
+
+                Sin | Cos | Tan => interpret_trig(
+                    stack,
+                    op,
+                    self.use_radians
+                )?,
+
+                ArcSin | ArcCos | ArcTan => interpret_inv_trig(
+                    stack,
+                    op,
+                    self.use_radians
+                )?,
+
+                Ans => interpret_const(
+                    stack,
+                    self.get_prev_ans()?
+                )?,
+                
+                Const(val) => interpret_const(
+                    stack,
+                    *val)?,
                 _ => {
                     return Err(RuntimeError::NotImplemented);
                 }
             }
         }
-        Ok(InterpretOutput { result: stack[0] }) // TODO: handle this better.
+
+        match stack.pop() {
+            Some(val) => {
+                let output = InterpretOutput { result: val };
+                self.prev_ans.push(output.clone());
+                Ok(output)
+            }
+            None => {
+                Err(RuntimeError::Underflow)
+            }
+        }
+    }
+
+    fn get_prev_ans(&self) -> Result<f64, RuntimeError> {
+        let n = self.prev_ans.len();
+        match self.prev_ans.get(n - 1) {
+            Some(output) => Ok(output.result),
+            None => {
+                Err(RuntimeError::NoPreviousAnswer)
+            } 
+        }
     }
 }
 
@@ -74,6 +115,11 @@ fn interpret_add(stack: &mut Vec<f64>) -> Result<(), RuntimeError> {
     }
 
     Err(RuntimeError::Underflow)
+}
+
+fn interpret_const(stack: &mut Vec<f64>, value: f64) -> Result<(), RuntimeError> {
+    stack.push(value.clone());
+    Ok(())
 }
 
 fn interpret_subtract(stack: &mut Vec<f64>) -> Result<(), RuntimeError> {

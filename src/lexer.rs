@@ -136,6 +136,7 @@ impl<'a> Lexer<'a> {
             "arcsin" => Ok(TokenType::ArcSin),
             "arccos" => Ok(TokenType::ArcCos),
             "arctan" => Ok(TokenType::ArcTan),
+            "ans" => Ok(TokenType::Ans),
             _ => Err(LexError::UnknownIdentifier { lexeme: lexeme.into(), span: (self.start, self.curr) }),
         }
     } 

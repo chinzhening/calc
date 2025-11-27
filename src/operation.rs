@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
+    Ans,
     Const(f64),
 
     // Unary Operations
