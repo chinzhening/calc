@@ -127,6 +127,11 @@ impl Parser {
                 infix: None,
                 precedence: Precedence::None,
             },
+            E | Pi => ParseRule {
+                prefix: Some(|parser| parser.constant()),
+                infix: None,
+                precedence: Precedence::None,
+            },
             Sin | Cos | Tan | 
             ArcSin | ArcCos | ArcTan |
             Exp | Ln => ParseRule {
@@ -202,6 +207,17 @@ impl Parser {
     fn number(&mut self) -> Result<(), ParseError> {
         let val = self.prev().lexeme.parse::<f64>().unwrap();
         self.operations.push(Operation::Const(val));
+        Ok(())
+    }
+
+    fn constant(&mut self) -> Result<(), ParseError> {
+        use std::f64::consts::{E, PI};
+        let prev_token_type = self.prev().clone().token_type;
+        match prev_token_type {
+            TokenType::E => self.operations.push(Operation::Const(E)),
+            TokenType::Pi => self.operations.push(Operation::Const(PI)),
+            _ => {},
+        }
         Ok(())
     }
 

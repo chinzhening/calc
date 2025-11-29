@@ -20,7 +20,7 @@ pub enum TokenType {
     Ln, Exp,
     // TODO: Log10, will not be parsed as an identifier, which will be a problem.
 
-    Ans,
+    Ans, Pi, E,
 
     EOF,
 }
