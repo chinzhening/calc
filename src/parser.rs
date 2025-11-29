@@ -120,7 +120,9 @@ impl Parser {
                 infix: None,
                 precedence: Precedence::None,
             },
-            Sin | Cos | Tan | ArcSin | ArcCos | ArcTan => ParseRule {
+            Sin | Cos | Tan | 
+            ArcSin | ArcCos | ArcTan |
+            Exp | Ln => ParseRule {
                 prefix: Some(|parser| parser.unary()),
                 infix: None,
                 precedence: Precedence::Term,
@@ -167,6 +169,8 @@ impl Parser {
             TokenType::ArcSin => self.operations.push(Operation::ArcSin),
             TokenType::ArcCos => self.operations.push(Operation::ArcCos),
             TokenType::ArcTan => self.operations.push(Operation::ArcTan),
+            TokenType::Ln => self.operations.push(Operation::Ln),
+            TokenType::Exp => self.operations.push(Operation::Exp),
             _ => {}
         }
         Ok(())

@@ -15,4 +15,6 @@ pub enum Operation {
     // Functions
     Sin, Cos, Tan,
     ArcSin, ArcCos, ArcTan,
+
+    Ln, Exp
 }

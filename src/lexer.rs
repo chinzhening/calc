@@ -136,6 +136,8 @@ impl<'a> Lexer<'a> {
             "arcsin" => Ok(TokenType::ArcSin),
             "arccos" => Ok(TokenType::ArcCos),
             "arctan" => Ok(TokenType::ArcTan),
+            "ln" => Ok(TokenType::Ln),
+            "exp" => Ok(TokenType::Exp), // TODO: change this to a binary expression, by scanning ^
             "ans" => Ok(TokenType::Ans),
             _ => Err(LexError::UnknownIdentifier { lexeme: lexeme.into(), span: (self.start, self.curr) }),
         }

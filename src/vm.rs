@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::f64::consts::E;
 use std::fmt;
 
 use crate::operation::Operation;
@@ -75,7 +76,14 @@ impl VirtualMachine {
                     stack,
                     self.get_prev_ans()?
                 )?,
-                
+                Ln => interpret_log(
+                    stack,
+                    E
+                )?,
+                Exp => interpret_power(
+                    stack,
+                    E
+                )?,
                 Const(val) => interpret_const(
                     stack,
                     *val)?,
@@ -106,6 +114,28 @@ impl VirtualMachine {
             } 
         }
     }
+}
+
+fn interpret_log(stack: &mut Vec<f64>, base: f64) -> Result<(), RuntimeError> {
+    if let Some(x) = stack.pop() {
+        if x > 0.0 {
+            return Err(RuntimeError::DomainError);
+        } else {
+            let val = f64::ln(x) / f64::ln(base);
+            stack.push(val);
+            return Ok(());
+        }
+    }
+    Err(RuntimeError::Underflow)
+}
+
+fn interpret_power(stack: &mut Vec<f64>, base: f64) -> Result<(), RuntimeError> {
+    if let Some(x) = stack.pop() {
+        let val = base.powf(x);
+        stack.push(val);
+        return Ok(());
+    }
+    Err(RuntimeError::Underflow)
 }
 
 fn interpret_add(stack: &mut Vec<f64>) -> Result<(), RuntimeError> {

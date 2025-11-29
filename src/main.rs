@@ -7,10 +7,16 @@ mod vm;
 use std::io::{self, Write};
 
 fn main() -> io::Result<()> {
+    welcome();
     repl()
 }
 
-
+fn welcome() {
+    println!("Welcome to Calc!\n");
+    println!("Press 'q' to quit.");
+    println!("Type '--mode=radian' to use radians, and '--mode=degree' to use degrees.");
+    println!("");
+}
 
 fn repl() -> io::Result<()> {
     let mut vm = vm::VirtualMachine::new();
@@ -28,7 +34,7 @@ fn repl() -> io::Result<()> {
         }
 
         match input.trim() {
-            "q" => break,
+            "q" | "exit" => break,
             "--mode=radian" => {vm.use_radians=true; continue},
             "--mode=degree" => {vm.use_radians=false; continue},
             "" => continue,
