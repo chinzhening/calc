@@ -59,6 +59,7 @@ impl VirtualMachine {
                 Times => interpret_times(stack)?,
                 Divide => interpret_divide(stack)?,
                 Negate => interpret_negate(stack)?,
+                Power => interpret_power(stack)?,
 
                 Sin | Cos | Tan => interpret_trig(
                     stack,
@@ -80,10 +81,7 @@ impl VirtualMachine {
                     stack,
                     E
                 )?,
-                Exp => interpret_power(
-                    stack,
-                    E
-                )?,
+                Exp => interpret_exp(stack)?,
                 Const(val) => interpret_const(
                     stack,
                     *val)?,
@@ -129,9 +127,19 @@ fn interpret_log(stack: &mut Vec<f64>, base: f64) -> Result<(), RuntimeError> {
     Err(RuntimeError::Underflow)
 }
 
-fn interpret_power(stack: &mut Vec<f64>, base: f64) -> Result<(), RuntimeError> {
-    if let Some(x) = stack.pop() {
-        let val = base.powf(x);
+fn interpret_exp(stack: &mut Vec<f64>) -> Result<(), RuntimeError> {
+    if let Some(a) = stack.pop() {
+        let val = E.powf(a);
+        stack.push(val);
+        return Ok(());
+    }
+
+    Err(RuntimeError::Underflow)
+}
+
+fn interpret_power(stack: &mut Vec<f64>) -> Result<(), RuntimeError> {
+    if let (Some(b), Some(a)) = (stack.pop(), stack.pop()) {
+        let val = a.powf(b);
         stack.push(val);
         return Ok(());
     }

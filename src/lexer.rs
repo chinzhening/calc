@@ -79,6 +79,7 @@ impl<'a> Lexer<'a> {
                 '+' => self.add_token(TokenType::Plus, c),
                 '*' => self.add_token(TokenType::Star, c),
                 '/' => self.add_token(TokenType::Slash, c),
+                '^' => self.add_token(TokenType::Caret, c),
 
                 ' ' | '\r' | '\n' | '\t' => {},
 

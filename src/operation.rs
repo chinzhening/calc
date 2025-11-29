@@ -11,6 +11,7 @@ pub enum Operation {
     Subtract,
     Times,
     Divide,
+    Power,
 
     // Functions
     Sin, Cos, Tan,

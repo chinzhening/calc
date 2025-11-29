@@ -17,6 +17,7 @@ enum Precedence {
     Term,
     Factor, 
     Unary,
+    Exponent,
     Call,
     Primary,
 }
@@ -26,7 +27,8 @@ impl Precedence {
         match self {
             None => Term,
             Term => Factor,
-            Factor => Unary,
+            Factor => Exponent,
+            Exponent => Unary,
             Unary => Call,
             Call => Primary,
             Primary => Primary,
@@ -85,6 +87,11 @@ impl Parser {
     fn get_parse_rule(token_type: &TokenType) -> ParseRule {
         use TokenType::*;
         match token_type {
+            Caret => ParseRule {
+                prefix: None,
+                infix: Some(|parser| parser.binary()),
+                precedence: Precedence::Exponent,
+            },
             LeftParen => ParseRule {
                 prefix: Some(|parser| parser.grouping()),
                 infix: None,
@@ -186,6 +193,7 @@ impl Parser {
             TokenType::Minus => self.operations.push(Operation::Subtract),
             TokenType::Star => self.operations.push(Operation::Times),
             TokenType::Slash => self.operations.push(Operation::Divide),
+            TokenType::Caret => self.operations.push(Operation::Power),
             _ => {}
         }
         Ok(())

@@ -6,6 +6,7 @@ pub enum TokenType {
     RightParen,
     Comma,
     
+    Caret,
     Minus,
     Plus,
     Slash,
