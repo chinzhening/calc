@@ -147,7 +147,6 @@ impl<'a> Lexer<'a> {
     fn number(&mut self) -> Result<(), LexError> {
         while Self::is_digit(self.peek()) {
             let c = self.advance();
-            println!("{}", c);
         }
 
         // Optional decimal part

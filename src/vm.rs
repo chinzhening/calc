@@ -41,7 +41,7 @@ impl fmt::Display for BaseType {
         let pi = "\u{03C0}";
         let sqrt = "\u{221A}";
         match self {
-            BaseType::Pure => write!(f, "1"),
+            BaseType::Pure => write!(f, ""),
             BaseType::Pi => write!(f, "{}", pi),
             BaseType::Sqrt(n) => write!(f, "{}({})", sqrt, n),
         }
