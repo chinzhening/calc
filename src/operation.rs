@@ -12,10 +12,12 @@ pub enum Operation {
     Times,
     Divide,
     Power,
+    Root,
 
     // Functions
     Sin, Cos, Tan,
     ArcSin, ArcCos, ArcTan,
+    Sqrt,
 
     Ln, Exp
 }

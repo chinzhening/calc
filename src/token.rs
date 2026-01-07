@@ -17,7 +17,7 @@ pub enum TokenType {
     Sin, Cos, Tan,
     ArcSin, ArcCos, ArcTan,
 
-    Ln, Exp,
+    Ln, Exp, Sqrt,
     // TODO: Log10, will not be parsed as an identifier, which will be a problem.
 
     Ans, Pi, E,

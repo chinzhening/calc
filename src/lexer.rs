@@ -11,9 +11,6 @@ pub fn scan<T: AsRef<[u8]>>(source: T) -> Result<Vec<Token>, LexError> {
 
 
 
-
-
-
 #[derive(Debug, PartialEq)]
 pub enum LexError {
     UnexpectedChar { char: String, span: (usize, usize) },
@@ -139,6 +136,7 @@ impl<'a> Lexer<'a> {
             "arctan" => Ok(TokenType::ArcTan),
             "ln" => Ok(TokenType::Ln),
             "exp" => Ok(TokenType::Exp),
+            "sqrt" => Ok(TokenType::Sqrt),
             "ans" => Ok(TokenType::Ans),
             "e" => Ok(TokenType::E),
             "pi" => Ok(TokenType::Pi),
