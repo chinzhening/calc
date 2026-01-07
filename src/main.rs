@@ -37,6 +37,8 @@ fn repl() -> io::Result<()> {
             "q" | "exit" => break,
             "--mode=radian" => {vm.use_radians=true; continue},
             "--mode=degree" => {vm.use_radians=false; continue},
+            "--display_hint=true" => {vm.use_display_hint=true; continue},
+            "--display_hint=false" => {vm.use_display_hint=false; continue},
             "" => continue,
             _ => {},
         }

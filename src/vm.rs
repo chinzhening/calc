@@ -100,13 +100,15 @@ impl fmt::Display for InterpretOutput {
         if let Some(hint) = self.hint.clone() {
             write!(f, "Output: {}", hint)
         } else {
-            write!(f, "Output: {}\nProvenance: {:?}", self.result, self.provenance)
+            write!(f, "Output: {}", self.result)
+            // write!(f, "Provenance: {}", self.provenance)
         }
     }
 }
 
 pub struct VirtualMachine {
     pub use_radians: bool,
+    pub use_display_hint: bool,
     prev_ans: Vec<InterpretOutput>,
     table: HashMap<String, f64>,
 }
@@ -114,6 +116,7 @@ impl VirtualMachine {
     pub fn new() -> Self {
         Self {
             use_radians: true,
+            use_display_hint: false,
             prev_ans: Vec::new(),
             table: HashMap::new(),
         }
@@ -175,10 +178,18 @@ impl VirtualMachine {
         match (stack.pop(), prov_stack.pop()) {
             (Some(val), Some(prov)) => {
                 let hint = make_hint(val,prov);
-                let output = InterpretOutput {
-                    result: val,
-                    provenance: prov,
-                    hint: hint, 
+                let output = if self.use_display_hint {
+                    InterpretOutput {
+                        result: val,
+                        provenance: prov,
+                        hint: hint, 
+                    }
+                } else {
+                    InterpretOutput {
+                        result: val,
+                        provenance: prov,
+                        hint: None,
+                    }
                 };
                 self.prev_ans.push(output.clone());
                 Ok(output)
